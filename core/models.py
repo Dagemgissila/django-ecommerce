@@ -56,6 +56,7 @@ class Vendor(models.Model):
       vid = ShortUUIDField(unique=True,max_length=30 , prefix="ven",alphabet="abcdefgh12345") 
       title=models.CharField(max_length=100,default="Nestify")
       image=models.ImageField(upload_to=user_directory_path,default="vendor.jpg")
+      cover_image=models.ImageField(upload_to=user_directory_path,default="vendor.jpg")
       description=models.TextField(null=True,blank=True, default="This is the vendor")  
       address=models.CharField(max_length=100,default="Addis Ababa")
       contact=models.CharField(max_length=100,default="0943880714")
@@ -67,6 +68,8 @@ class Vendor(models.Model):
       
       
       user=models.ForeignKey(User,on_delete=models.SET_NULL , null=True)
+      date = models.DateTimeField(auto_now_add=True,null=True)
+      
       
       
       class Meta:
@@ -83,9 +86,9 @@ class Product(models.Model):
       pid = ShortUUIDField(unique=True,max_length=30 ,alphabet="abcdefgh12345") 
       
       user=models.ForeignKey(User,on_delete=models.SET_NULL , null=True)
-      vendor=models.ForeignKey(Vendor,on_delete=models.SET_NULL, null=True)
+      vendor=models.ForeignKey(Vendor,on_delete=models.SET_NULL, null=True,related_name="product")
       
-      category=models.ForeignKey(Category , on_delete=models.SET_NULL , null=True)
+      category=models.ForeignKey(Category , on_delete=models.SET_NULL , null=True,related_name="category")
       
       title=models.CharField(max_length=100,default="Fresh Pear")
       image=models.ImageField(upload_to=user_directory_path,default="product.jpg")
