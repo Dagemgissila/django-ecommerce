@@ -1,6 +1,11 @@
-from django.shortcuts import render
+from django.shortcuts import render,get_object_or_404
+from django.http import HttpResponse,JsonResponse
 from core.models import CartOrderItems, Product, Category, Vendor, CartOrder, ProductImages, ProductReview, wishlist_model, Address
-from django.db.models import Count
+from django.db.models import Count,Avg
+from taggit.models import Tag
+from core.forms import ProductReviewForm
+from django.db.models import Q
+
 # Create your views here.
 
 
@@ -61,13 +66,81 @@ def vendor_detail_view(request,vid):
 
 def product_detail_view(request,pid):
     product=Product.objects.get(pid=pid)
+    products=Product.objects.filter(category=product.category).exclude(pid=pid)
+    reviews=ProductReview.objects.filter(product=product).order_by("-date")
+    average_rating=ProductReview.objects.filter(product=product).aggregate(rating=Avg("rating"))
+    review_form=ProductReviewForm()
+    make_review=True
+    if request.user.is_authenticated:
+        user_review_count=ProductReview.objects.filter(user=request.user,product=product).count()
+        
+        if user_review_count > 0:
+            make_review=False
+        
     p_image=product.p_images.all()
     
     context={
         "p":product,
-        'p_image':p_image
+        'p_image':p_image,
+        'make_review':make_review,
+        "products":products,
+        "reviews":reviews,
+        "average_rating":average_rating,
+        "review_form":review_form
     }
     
     return render(request,"core/product-detail.html",context)
+
+def tag_list(request, tag_slug=None):
+
+    products = Product.objects.filter(product_status="published").order_by("-id")
+
+    tag = None 
+    if tag_slug:
+        tag = get_object_or_404(Tag, slug=tag_slug)
+        products = products.filter(tags__in=[tag])
+
+    context = {
+        "products": products,
+        "tag": tag
+    }
+
+    return render(request, "core/tag.html", context)
+
+
+def ajax_add_review(request, pid):
+    product = Product.objects.get(pid=pid)
+    user = request.user
+
+    review = ProductReview.objects.create(
+        user=user,
+        product=product,
+        review=request.POST["review"],
+        rating=request.POST["rating"],
+    )
+
+    context = {
+        "user": user.username,
+        "review": request.POST["review"],
+        "rating": request.POST["rating"]
+    }
+    average_reviews = ProductReview.objects.filter(product=product).aggregate(rating=Avg("rating"))
+
+    return JsonResponse({
+        "bool": True,
+        "context": context,
+        "average_reviews": average_reviews['rating']  # Access the 'rating' value from the dict
+    })
     
     
+
+def search_view(request):
+    query = request.GET.get("q", "")  # Use .get() to avoid KeyError if 'q' is missing
+    products = Product.objects.filter(Q(title__icontains=query) | Q(description__icontains=query))
+    
+    context = {
+        "products": products,
+        "query":query
+    }
+    
+    return render(request, "core/search.html", context)

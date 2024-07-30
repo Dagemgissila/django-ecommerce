@@ -23,7 +23,8 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("", include("core.urls")),
-    path("user/",include("userauthes.urls"))
+    path("user/",include("userauthes.urls")),
+    path("ckeditor5/", include('ckeditor_uploader.urls')),
 ]
 
 if settings.DEBUG:
