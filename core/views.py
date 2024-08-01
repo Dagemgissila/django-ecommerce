@@ -5,6 +5,7 @@ from django.db.models import Count,Avg
 from taggit.models import Tag
 from core.forms import ProductReviewForm
 from django.db.models import Q
+from django.template.loader import render_to_string
 
 # Create your views here.
 
@@ -144,3 +145,46 @@ def search_view(request):
     }
     
     return render(request, "core/search.html", context)
+
+
+def filter_products(request):
+    categories = request.GET.getlist('category[]')
+    vendors = request.GET.getlist('vendor[]')
+    products = Product.objects.all().order_by('-id').distinct()
+    if len(categories) > 0:
+       products = products.filter(category__id__in=categories).distinct()
+    if len(vendors) > 0:
+         products = products.filter(vendor__id__in = vendors).distinct()
+ 
+    n = render_to_string('core/async/product-list.html', {'products':products})
+    return JsonResponse({'data' : n})
+
+
+
+def add_to_cart(request):
+    # del request.session['cartdata']
+    cart_p = {}
+    cart_p[str(request.GET['id'])] = {
+        'title': request.GET['title'],
+        'qty': request.GET['qty'],
+        'price': request.GET['price']
+    }
+
+    if 'cart_data_obj' in request.session:
+        if str(request.GET['id']) in request.session['cart_data_obj']:
+            cart_data = request.session['cart_data_obj']
+            cart_data[str(request.GET['id'])]['qty'] = int(cart_p[str(request.GET['id'])]['qty'])
+            cart_data.update(cart_p)
+            request.session['cart_data_obj'] = cart_data
+        else:
+          cart_data = request.session['cart_data_obj']
+          cart_data.update(cart_p)
+          request.session['cart_data_obj'] = cart_data
+    else:
+      request.session['cart_data_obj'] = cart_p
+      cart_data.update(cart_p)
+      
+        
+    return JsonResponse({'data': request.session['cart_data_obj'], 'totalcartitems': len(request.session['cart_data_obj'])})
+
+    
